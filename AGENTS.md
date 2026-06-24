@@ -1,0 +1,1 @@
+- Before committing changes, ensure it passes `poetry run poe check`, as well as unit tests if any exist.

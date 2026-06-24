@@ -1,0 +1,40 @@
+[project]
+name = "hypackconverter"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Luna", email = "lunaynx@gmail.com"}
+]
+requires-python = ">=3.14"
+dependencies = [
+]
+
+[dependency-groups]
+dev = [
+    "pyright (>=1.1.410,<2.0.0)",
+    "black (>=26.5.1,<27.0.0)",
+    "isort (>=8.0.1,<9.0.0)",
+    "poethepoet (>=0.46.0,<0.47.0)"
+]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+package-mode = false
+
+[tool.poetry.requires-plugins]
+poethepoet = ">=0.39"
+
+[tool.black]
+line-length = 120
+target-version = ["py314"]
+
+[tool.isort]
+line_length = 120
+profile = "black"
+skip_gitignore = true
+
+[tool.poe.tasks]
+check.shell = "black . && isort . && pyright ."
