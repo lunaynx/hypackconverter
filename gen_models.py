@@ -9,7 +9,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-from hypackconverter import ITEM_DEFINITION_PREFIX, RepoIndex, RepoLoadError, load_repo_index, normalize_zip_path
+from utils import ITEM_DEFINITION_PREFIX, RepoIndex, RepoLoadError, load_repo_index, normalize_zip_path
 
 
 def generate_model_map(input_path: Path, index: RepoIndex) -> dict[str, str]:
