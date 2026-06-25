@@ -228,11 +228,11 @@ class ConversionTests(unittest.TestCase):
             self.assertEqual(files["assets/minecraft/lang/en_us.json"], b'{"hello":"world"}')
             self.assertEqual(
                 json.loads(files["assets/skyblock/items/cactus_knife_3.json"]),
-                {"type": "minecraft:model", "model": "hypixel_skyblock:item/a"},
+                {"model": {"type": "minecraft:model", "model": "hypixel_skyblock:item/a"}},
             )
             self.assertEqual(
                 json.loads(files["assets/skyblock/items/legend_rod.json"]),
-                {"type": "minecraft:model", "model": "hypixel_skyblock:item/shared"},
+                {"model": {"type": "minecraft:model", "model": "hypixel_skyblock:item/shared"}},
             )
             self.assertNotIn("assets/skyblock/items/unknown.json", files)
             self.assertEqual(

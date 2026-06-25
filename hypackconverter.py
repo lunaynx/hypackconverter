@@ -253,13 +253,8 @@ def convert_item_definition(path: str, data: bytes, index: RepoIndex, inner_file
         warn_unmapped(path, f"invalid JSON: {exc}")
         return
 
-    if isinstance(parsed, Mapping) and "model" in parsed:
-        model_body = parsed["model"]
-    else:
-        model_body = parsed
-
     output_path = f"{SKYBLOCK_ITEM_PREFIX}{resolved.path}.json"
-    inner_files[output_path] = json.dumps(model_body, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    inner_files[output_path] = json.dumps(parsed, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
 
 
 def warn_unmapped(path: str, reason: str) -> None:
