@@ -22,6 +22,7 @@ from utils import (
     RepoIndex,
     RepoLoadError,
     add_items,
+    add_resource_pack_aliases,
     fetch_repo_json,
     normalize_zip_path,
 )
@@ -57,6 +58,7 @@ def load_legacy_repo_from_items(items: object) -> tuple[RepoIndex, dict[str, Leg
 
     index = RepoIndex()
     add_items(index, items)
+    add_resource_pack_aliases(index)
     return index, build_vanilla_item_models(items)
 
 

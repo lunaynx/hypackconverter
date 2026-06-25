@@ -10,6 +10,7 @@ from pathlib import Path
 
 import gen_legacy_pack
 from tests.test_hypackconverter import parse_cats
+from utils import ResolvedId
 
 PNG_BYTES = b"\x89PNG\r\n\x1a\nfake"
 
@@ -42,6 +43,23 @@ def texture_profile(url: str) -> dict[str, object]:
 
 
 class GenLegacyPackTests(unittest.TestCase):
+    def test_load_legacy_repo_adds_resource_pack_aliases(self) -> None:
+        index, vanilla_item_models = gen_legacy_pack.load_legacy_repo_from_items(
+            [
+                repo_item("CROPSHOT_GARDEN_CHIP", "minecraft:paper", "Cropshot", "minecraft:paper"),
+                repo_item("MAGMA_FISH_SILVER", "minecraft:cod", "Magmafish Silver"),
+                repo_item("BOUQUET_OF_LIES", "minecraft:diamond_sword", "Bouquet of Lies"),
+                repo_item("OTHER_CROPSHOT", "minecraft:paper", "Cropshot Chip"),
+            ]
+        )
+
+        self.assertEqual(index.resolve("cropshot_chip"), ResolvedId("cropshot_garden_chip", "direct"))
+        self.assertEqual(index.resolve("magmafish_silver"), ResolvedId("magma_fish_silver", "direct"))
+        self.assertEqual(index.resolve("bouqet_of_lies"), ResolvedId("bouquet_of_lies", "direct"))
+        self.assertIn("cropshot_garden_chip", vanilla_item_models)
+        self.assertIn("magma_fish_silver", vanilla_item_models)
+        self.assertIn("bouquet_of_lies", vanilla_item_models)
+
     def test_build_vanilla_item_models_prefers_item_model_component(self) -> None:
         self.assertEqual(
             gen_legacy_pack.build_vanilla_item_models(
