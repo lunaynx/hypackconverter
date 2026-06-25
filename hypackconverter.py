@@ -40,6 +40,59 @@ STATE_SUFFIXES = (
 )
 FORMAT_CODE_PATTERN = re.compile(r"\u00a7.")
 NON_WORD_PATTERN = re.compile(r"[^a-z0-9]+")
+APOSTROPHE_PATTERN = re.compile(r"['\u2019]")
+FRAGGED_PREFIX = "\u269a"
+RESOURCE_PACK_ID_ALIASES = {
+    "arachnes_calling": "arachne_keeper_fragment",
+    "arachnes_fang": "arachne_fang",
+    "magmafish_bronze": "magma_fish",
+    "magmafish_silver": "magma_fish_silver",
+    "magmafish_gold": "magma_fish_gold",
+    "magmafish_diamond": "magma_fish_diamond",
+    "titanboa_shed": "titanoboa_shed",
+    "hunters_knife": "hunter_knife",
+    "tool_xp_capsule": "tool_exp_capsule",
+    "divans_alloy": "divan_alloy",
+    "lasr_eye": "giant_fragment_laser",
+    "diamantes_handle": "giant_fragment_diamond",
+    "tessalated_ender_pearl": "tessellated_ender_pearl",
+    "zombie_solider_cutlass": "zombie_soldier_cutlass",
+    "emperors_skull": "diver_fragment",
+    "soulsteeler_bow": "crypt_bow",
+    "adaptive_blade": "stone_blade",
+    "necromancers_sword": "necromancer_sword",
+    "bigfoots_bola": "giant_fragment_bigfoot",
+    "adaptive_blade_fragged": "starred_stone_blade",
+    "tacticians_sword": "tactician_sword",
+    "shadow_fury_fragged": "starred_shadow_fury",
+    "midas_sword_fragged": "starred_midas_sword",
+    "necrons_blade": "necron_blade",
+    "divans_drill": "divan_drill",
+    "fragranced_brown_mushroom": "fragranced_brown_mushroom_paste",
+    "daedalus_blade": "daedalus_axe",
+    "daedalus_blade_fragged": "starred_daedalus_axe",
+    "jerrychine_gun": "jerry_staff",
+    "cropshot_chip": "cropshot_garden_chip",
+    "bachelors_rose": "bachelor_rose",
+    "yeti_sword_fragged": "starred_yeti_sword",
+    "super_sharp_and_stabby_steak_stake": "sharp_steak_stake",
+    "tacticians_murder_weapon": "tactician_murder_weapon",
+    "endstone_blade": "end_stone_sword",
+    "savage_huntaxe": "apex_praedator",
+    "worn_huntaxe": "venator_genesis",
+    "prime_huntaxe": "nex_titanum",
+    "sharpened_huntaxe": "silva_dominus",
+    "reinforced_huntaxe": "cursus_ferae",
+    "architects_first_draft": "architect_first_draft",
+    "spirit_shortbow": "item_spirit_bow",
+    "bonzos_staff": "bonzo_staff",
+    "bouqet_of_lies": "bouquet_of_lies",
+    "bonzos_staff_fragged": "starred_bonzo_staff",
+    "spirit_sceptre": "bat_wand",
+    "spirit_sceptre_fragged": "starred_bat_wand",
+    "bonemerang": "bone_boomerang",
+    "felthorn_reaper_fragged": "starred_felthorn_reaper",
+}
 
 
 class RepoLoadError(RuntimeError):
@@ -63,7 +116,14 @@ class RepoIndex:
             self.direct[source] = target
 
     def add_name(self, name: object, target: str) -> None:
-        normalized = normalize_name(strip_formatting(component_to_text(name)))
+        text = strip_formatting(component_to_text(name)).strip()
+        if text.startswith(FRAGGED_PREFIX):
+            normalized = normalize_name(text.removeprefix(FRAGGED_PREFIX))
+            if normalized:
+                self.names[f"{normalized}_fragged"].add(target)
+            return
+
+        normalized = normalize_name(text)
         if normalized:
             self.names[normalized].add(target)
 
@@ -92,6 +152,7 @@ def strip_formatting(value: str) -> str:
 
 
 def normalize_name(value: str) -> str:
+    value = APOSTROPHE_PATTERN.sub("", value)
     normalized = NON_WORD_PATTERN.sub("_", value.casefold()).strip("_")
     return re.sub(r"_+", "_", normalized)
 
@@ -138,7 +199,13 @@ def load_repo_index(base_url: str = REPO_BASE_URL) -> RepoIndex:
     add_runes(index, repo_data["runes.min.json"])
     add_keyed_repo(index, repo_data["potions.min.json"], "potions", name_fields=("name",))
     add_attributes(index, repo_data["attributes.min.json"])
+    add_resource_pack_aliases(index)
     return index
+
+
+def add_resource_pack_aliases(index: RepoIndex) -> None:
+    for resource_pack_id, custom_data_id in RESOURCE_PACK_ID_ALIASES.items():
+        index.add_direct(resource_pack_id, custom_data_id)
 
 
 def add_items(index: RepoIndex, data: Any) -> None:

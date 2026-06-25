@@ -163,6 +163,28 @@ class IdResolutionTests(unittest.TestCase):
             hypackconverter.ResolvedId("goblin_egg_blue", "display name"),
         )
 
+    def test_display_name_fallback_removes_apostrophes(self) -> None:
+        index = hypackconverter.RepoIndex()
+        hypackconverter.add_items(index, [item("HUNTER_KNIFE", "Hunter's Knife")])
+
+        self.assertEqual(index.resolve("hunters_knife"), hypackconverter.ResolvedId("hunter_knife", "display name"))
+
+    def test_fragged_display_name_fallbacks_do_not_match_plain_names(self) -> None:
+        index = hypackconverter.RepoIndex()
+        hypackconverter.add_items(
+            index,
+            [
+                item("PLAIN_THING", "Thing"),
+                item("STARRED_PLAIN_THING", "\u269a Thing"),
+            ],
+        )
+
+        self.assertEqual(index.resolve("thing"), hypackconverter.ResolvedId("plain_thing", "display name"))
+        self.assertEqual(
+            index.resolve("thing_fragged"),
+            hypackconverter.ResolvedId("starred_plain_thing", "display name"),
+        )
+
     def test_ambiguous_names_skip_instead_of_guessing(self) -> None:
         index = hypackconverter.RepoIndex()
         hypackconverter.add_items(index, [item("FIRST_ID", "Same Name"), item("SECOND_ID", "Same Name")])
@@ -175,6 +197,14 @@ class IdResolutionTests(unittest.TestCase):
             self.index.resolve("rod_of_legends_cast"),
             hypackconverter.ResolvedId("legend_rod", "display name"),
         )
+
+    def test_manual_resource_pack_aliases(self) -> None:
+        index = hypackconverter.RepoIndex()
+        hypackconverter.add_resource_pack_aliases(index)
+
+        for resource_pack_id, custom_data_id in hypackconverter.RESOURCE_PACK_ID_ALIASES.items():
+            with self.subTest(resource_pack_id=resource_pack_id):
+                self.assertEqual(index.resolve(resource_pack_id), hypackconverter.ResolvedId(custom_data_id, "direct"))
 
 
 class ConversionTests(unittest.TestCase):
