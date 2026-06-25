@@ -10,7 +10,7 @@ from pathlib import Path
 from unittest import mock
 
 import gen_models
-import hypackconverter
+import gen_modern_pack as hypackconverter
 from tests.test_hypackconverter import item
 
 

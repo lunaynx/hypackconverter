@@ -45,7 +45,7 @@ from utils import (
 
 
 def convert_pack(input_path: Path, index: RepoIndex) -> Path:
-    output_path = input_path.with_name(f"{input_path.stem}.cats.zip")
+    output_path = input_path.with_name(f"{input_path.stem}.modern.cats.zip")
     pack_mcmeta = build_pack_mcmeta(read_input_pack_mcmeta(input_path), input_path.stem)
     inner_files: dict[str, bytes] = {"pack.mcmeta": pack_mcmeta}
 

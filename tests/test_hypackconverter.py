@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 from unittest import mock
 
-import hypackconverter
+import gen_modern_pack as hypackconverter
 
 
 def repo_payloads(items: list[dict[str, Any]] | None = None) -> dict[str, Any]:
@@ -303,7 +303,7 @@ class ConversionTests(unittest.TestCase):
             with redirect_stderr(stderr):
                 output_path = hypackconverter.convert_pack(input_path, index)
 
-            self.assertEqual(output_path, Path(temp_dir) / "84.cats.zip")
+            self.assertEqual(output_path, Path(temp_dir) / "84.modern.cats.zip")
             self.assertIn(
                 "Warning: could not map assets/hypixel_skyblock/items/item/fishing/rod/unknown.json (missing mapping)",
                 stderr.getvalue(),
