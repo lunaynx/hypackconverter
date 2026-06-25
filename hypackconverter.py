@@ -43,54 +43,26 @@ NON_WORD_PATTERN = re.compile(r"[^a-z0-9]+")
 APOSTROPHE_PATTERN = re.compile(r"['\u2019]")
 FRAGGED_PREFIX = "\u269a"
 RESOURCE_PACK_ID_ALIASES = {
-    "adaptive_blade": "stone_blade",
-    "adaptive_blade_fragged": "starred_stone_blade",
-    "arachnes_calling": "arachne_keeper_fragment",
-    "arachnes_fang": "arachne_fang",
-    "architects_first_draft": "architect_first_draft",
-    "bachelors_rose": "bachelor_rose",
-    "bigfoots_bola": "giant_fragment_bigfoot",
-    "bonemerang": "bone_boomerang",
-    "bonzos_staff": "bonzo_staff",
-    "bonzos_staff_fragged": "starred_bonzo_staff",
     "bouqet_of_lies": "bouquet_of_lies",
     "cropshot_chip": "cropshot_garden_chip",
-    "daedalus_blade": "daedalus_axe",
-    "daedalus_blade_fragged": "starred_daedalus_axe",
-    "diamantes_handle": "giant_fragment_diamond",
-    "divans_alloy": "divan_alloy",
-    "divans_drill": "divan_drill",
-    "emperors_skull": "diver_fragment",
     "endstone_blade": "end_stone_sword",
-    "felthorn_reaper_fragged": "starred_felthorn_reaper",
     "fragranced_brown_mushroom": "fragranced_brown_mushroom_paste",
-    "hunters_knife": "hunter_knife",
     "jerrychine_gun": "jerry_staff",
     "lasr_eye": "giant_fragment_laser",
     "magmafish_bronze": "magma_fish",
     "magmafish_diamond": "magma_fish_diamond",
     "magmafish_gold": "magma_fish_gold",
     "magmafish_silver": "magma_fish_silver",
-    "midas_sword_fragged": "starred_midas_sword",
-    "necromancers_sword": "necromancer_sword",
-    "necrons_blade": "necron_blade",
     "prime_huntaxe": "nex_titanum",
     "reinforced_huntaxe": "cursus_ferae",
     "savage_huntaxe": "apex_praedator",
-    "shadow_fury_fragged": "starred_shadow_fury",
     "sharpened_huntaxe": "silva_dominus",
     "soulsteeler_bow": "crypt_bow",
-    "spirit_sceptre": "bat_wand",
-    "spirit_sceptre_fragged": "starred_bat_wand",
-    "spirit_shortbow": "item_spirit_bow",
     "super_sharp_and_stabby_steak_stake": "sharp_steak_stake",
-    "tacticians_murder_weapon": "tactician_murder_weapon",
-    "tacticians_sword": "tactician_sword",
     "tessalated_ender_pearl": "tessellated_ender_pearl",
     "titanboa_shed": "titanoboa_shed",
     "tool_xp_capsule": "tool_exp_capsule",
     "worn_huntaxe": "venator_genesis",
-    "yeti_sword_fragged": "starred_yeti_sword",
     "zombie_solider_cutlass": "zombie_soldier_cutlass",
 }
 
@@ -129,8 +101,9 @@ class RepoIndex:
 
     def resolve(self, stem: str) -> ResolvedId | None:
         cleaned = cleanup_state_suffix(stem.lower())
-        if cleaned in self.direct:
-            return ResolvedId(self.direct[cleaned], "direct")
+        for direct_candidate in direct_id_candidates(cleaned):
+            if direct_candidate in self.direct:
+                return ResolvedId(self.direct[direct_candidate], "direct")
 
         name_matches = self.names.get(cleaned, set())
         if len(name_matches) == 1:
@@ -145,6 +118,34 @@ def cleanup_state_suffix(stem: str) -> str:
         if stem.endswith(suffix):
             return stem[: -len(suffix)]
     return stem
+
+
+def direct_id_candidates(stem: str) -> Iterable[str]:
+    seen: set[str] = set()
+    for candidate in (stem, *drop_possessive_s_variants(stem)):
+        if candidate not in seen:
+            seen.add(candidate)
+            yield candidate
+
+    if not stem.endswith("_fragged"):
+        return
+
+    base = stem[: -len("_fragged")]
+    for candidate in (base, *drop_possessive_s_variants(base)):
+        starred_candidate = f"starred_{candidate}"
+        if starred_candidate not in seen:
+            seen.add(starred_candidate)
+            yield starred_candidate
+
+
+def drop_possessive_s_variants(stem: str) -> Iterable[str]:
+    parts = stem.split("_")
+    for index, part in enumerate(parts):
+        if len(part) <= 2 or not part.endswith("s"):
+            continue
+        variant_parts = [*parts]
+        variant_parts[index] = part[:-1]
+        yield "_".join(variant_parts)
 
 
 def strip_formatting(value: str) -> str:

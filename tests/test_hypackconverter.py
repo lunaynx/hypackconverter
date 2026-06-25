@@ -165,9 +165,41 @@ class IdResolutionTests(unittest.TestCase):
 
     def test_display_name_fallback_removes_apostrophes(self) -> None:
         index = hypackconverter.RepoIndex()
-        hypackconverter.add_items(index, [item("HUNTER_KNIFE", "Hunter's Knife")])
+        hypackconverter.add_items(index, [item("KNIFE_HUNTER", "Hunter's Knife")])
 
-        self.assertEqual(index.resolve("hunters_knife"), hypackconverter.ResolvedId("hunter_knife", "display name"))
+        self.assertEqual(index.resolve("hunters_knife"), hypackconverter.ResolvedId("knife_hunter", "display name"))
+
+    def test_direct_id_fallback_drops_possessive_s(self) -> None:
+        index = hypackconverter.RepoIndex()
+        hypackconverter.add_items(
+            index,
+            [
+                item("ARACHNE_FANG", "Arachne Fang"),
+                item("HUNTER_KNIFE", "Hunter Knife"),
+            ],
+        )
+
+        self.assertEqual(index.resolve("arachnes_fang"), hypackconverter.ResolvedId("arachne_fang", "direct"))
+        self.assertEqual(index.resolve("hunters_knife"), hypackconverter.ResolvedId("hunter_knife", "direct"))
+
+    def test_fragged_direct_id_fallback_uses_starred_prefix(self) -> None:
+        index = hypackconverter.RepoIndex()
+        hypackconverter.add_items(
+            index,
+            [
+                item("STARRED_SHADOW_FURY", "Shadow Fury"),
+                item("STARRED_BONZO_STAFF", "Bonzo Staff"),
+            ],
+        )
+
+        self.assertEqual(
+            index.resolve("shadow_fury_fragged"),
+            hypackconverter.ResolvedId("starred_shadow_fury", "direct"),
+        )
+        self.assertEqual(
+            index.resolve("bonzos_staff_fragged"),
+            hypackconverter.ResolvedId("starred_bonzo_staff", "direct"),
+        )
 
     def test_fragged_display_name_fallbacks_do_not_match_plain_names(self) -> None:
         index = hypackconverter.RepoIndex()
