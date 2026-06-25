@@ -100,6 +100,74 @@ class GenModelsTests(unittest.TestCase):
             '{\n  "SQUEAKY_MOUSEMAT": "hypixel_skyblock:item/uncategorized/squeaky_mousemat"\n}\n',
         )
 
+    def test_find_first_item_model_prefers_base_model_over_state_variants(self) -> None:
+        self.assertEqual(
+            gen_models.find_first_item_model(
+                {
+                    "model": {
+                        "type": "condition",
+                        "property": "selected",
+                        "on_true": {
+                            "type": "range_dispatch",
+                            "property": "cooldown",
+                            "fallback": {
+                                "type": "model",
+                                "model": "hypixel_skyblock:item/uncategorized/artisanal_shortbow_pulling_2",
+                            },
+                            "entries": [
+                                {
+                                    "model": {
+                                        "type": "model",
+                                        "model": "hypixel_skyblock:item/uncategorized/artisanal_shortbow_pulling_1",
+                                    },
+                                    "threshold": 0.2,
+                                },
+                                {
+                                    "model": {
+                                        "type": "model",
+                                        "model": "hypixel_skyblock:item/uncategorized/artisanal_shortbow",
+                                    },
+                                    "threshold": 0.8,
+                                },
+                            ],
+                        },
+                        "on_false": {
+                            "type": "model",
+                            "model": "hypixel_skyblock:item/uncategorized/artisanal_shortbow",
+                        },
+                    }
+                }
+            ),
+            "hypixel_skyblock:item/uncategorized/artisanal_shortbow",
+        )
+
+        self.assertEqual(
+            gen_models.find_first_item_model(
+                {
+                    "model": {
+                        "type": "condition",
+                        "on_false": {
+                            "type": "model",
+                            "model": "hypixel_skyblock:item/uncategorized/hurricane_bow",
+                        },
+                        "on_true": {
+                            "type": "range_dispatch",
+                            "entries": [
+                                {
+                                    "model": {
+                                        "type": "model",
+                                        "model": "hypixel_skyblock:item/uncategorized/hurricane_bow_pulling_2",
+                                    },
+                                    "threshold": 0.9,
+                                }
+                            ],
+                        },
+                    }
+                }
+            ),
+            "hypixel_skyblock:item/uncategorized/hurricane_bow",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

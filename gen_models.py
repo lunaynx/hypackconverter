@@ -9,7 +9,14 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-from utils import ITEM_DEFINITION_PREFIX, RepoIndex, RepoLoadError, load_repo_index, normalize_zip_path
+from utils import (
+    ITEM_DEFINITION_PREFIX,
+    RepoIndex,
+    RepoLoadError,
+    cleanup_state_suffix,
+    load_repo_index,
+    normalize_zip_path,
+)
 
 
 def generate_model_map(input_path: Path, index: RepoIndex) -> dict[str, str]:
@@ -43,25 +50,36 @@ def custom_data_key(resolved_path: str) -> str:
 
 
 def find_first_item_model(value: object) -> str | None:
+    item_models = list(find_item_models(value))
+    for item_model in item_models:
+        if not is_state_variant_model(item_model):
+            return item_model
+    return item_models[0] if item_models else None
+
+
+def find_item_models(value: object) -> Sequence[str]:
     if isinstance(value, Mapping):
         model = value.get("model")
-        if value.get("type") == "minecraft:model" and isinstance(model, str):
-            return model
         if isinstance(model, str):
-            return model
+            return [model]
+
+        item_models: list[str] = []
         for child in value.values():
-            item_model = find_first_item_model(child)
-            if item_model is not None:
-                return item_model
-        return None
+            item_models.extend(find_item_models(child))
+        return item_models
 
     if isinstance(value, Sequence) and not isinstance(value, str):
+        item_models = []
         for child in value:
-            item_model = find_first_item_model(child)
-            if item_model is not None:
-                return item_model
+            item_models.extend(find_item_models(child))
+        return item_models
 
-    return None
+    return []
+
+
+def is_state_variant_model(item_model: str) -> bool:
+    model_name = item_model.rsplit("/", 1)[-1]
+    return cleanup_state_suffix(model_name) != model_name
 
 
 def parse_args(argv: Sequence[str]) -> argparse.Namespace:
