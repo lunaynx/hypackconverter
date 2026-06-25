@@ -19,8 +19,8 @@ from utils import (
 )
 
 
-def generate_model_map(input_path: Path, index: RepoIndex) -> dict[str, str]:
-    model_map: dict[str, str] = {}
+def generate_model_map(input_path: Path, index: RepoIndex) -> dict[str, list[str]]:
+    model_map: dict[str, set[str]] = {}
     with zipfile.ZipFile(input_path, "r") as source_zip:
         for info in source_zip.infolist():
             if info.is_dir():
@@ -38,11 +38,11 @@ def generate_model_map(input_path: Path, index: RepoIndex) -> dict[str, str]:
             except UnicodeDecodeError, json.JSONDecodeError:
                 continue
 
-            item_model = find_first_item_model(item_definition)
-            if item_model is not None:
-                model_map[custom_data_key(resolved.path)] = item_model
+            item_models = find_item_models(item_definition)
+            if item_models:
+                model_map.setdefault(custom_data_key(resolved.path), set()).update(item_models)
 
-    return dict(sorted(model_map.items()))
+    return {custom_data_id: sort_item_models(item_models) for custom_data_id, item_models in sorted(model_map.items())}
 
 
 def custom_data_key(resolved_path: str) -> str:
@@ -51,10 +51,7 @@ def custom_data_key(resolved_path: str) -> str:
 
 def find_first_item_model(value: object) -> str | None:
     item_models = list(find_item_models(value))
-    for item_model in item_models:
-        if not is_state_variant_model(item_model):
-            return item_model
-    return item_models[0] if item_models else None
+    return sort_item_models(item_models)[0] if item_models else None
 
 
 def find_item_models(value: object) -> Sequence[str]:
@@ -80,6 +77,12 @@ def find_item_models(value: object) -> Sequence[str]:
 def is_state_variant_model(item_model: str) -> bool:
     model_name = item_model.rsplit("/", 1)[-1]
     return cleanup_state_suffix(model_name) != model_name
+
+
+def sort_item_models(item_models: Sequence[str] | set[str]) -> list[str]:
+    base_models = sorted(item_model for item_model in item_models if not is_state_variant_model(item_model))
+    state_models = sorted(item_model for item_model in item_models if is_state_variant_model(item_model))
+    return [*base_models, *state_models]
 
 
 def parse_args(argv: Sequence[str]) -> argparse.Namespace:
