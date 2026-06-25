@@ -47,6 +47,7 @@ class GenLegacyPackTests(unittest.TestCase):
         index, vanilla_item_models = gen_legacy_pack.load_legacy_repo_from_items(
             [
                 repo_item("CROPSHOT_GARDEN_CHIP", "minecraft:paper", "Cropshot", "minecraft:paper"),
+                repo_item("TUTORIAL_GARDEN_CHIP", "minecraft:paper", "Tutorial Garden Chip", "minecraft:paper"),
                 repo_item("MAGMA_FISH_SILVER", "minecraft:cod", "Magmafish Silver"),
                 repo_item("BOUQUET_OF_LIES", "minecraft:diamond_sword", "Bouquet of Lies"),
                 repo_item("OTHER_CROPSHOT", "minecraft:paper", "Cropshot Chip"),
@@ -57,6 +58,7 @@ class GenLegacyPackTests(unittest.TestCase):
         self.assertEqual(index.resolve("magmafish_silver"), ResolvedId("magma_fish_silver", "direct"))
         self.assertEqual(index.resolve("bouqet_of_lies"), ResolvedId("bouquet_of_lies", "direct"))
         self.assertIn("cropshot_garden_chip", vanilla_item_models)
+        self.assertIn("tutorial_garden_chip", vanilla_item_models)
         self.assertIn("magma_fish_silver", vanilla_item_models)
         self.assertIn("bouquet_of_lies", vanilla_item_models)
 
@@ -173,6 +175,39 @@ class GenLegacyPackTests(unittest.TestCase):
                 },
             )
             self.assertNotIn("assets/hypixel_skyblock/models/item/unused.json", files)
+
+    def test_convert_pack_writes_additional_model_targets(self) -> None:
+        index, vanilla_item_models = gen_legacy_pack.load_legacy_repo_from_items(
+            [
+                repo_item("CROPSHOT_GARDEN_CHIP", "minecraft:paper", "Cropshot", "minecraft:paper"),
+                repo_item("TUTORIAL_GARDEN_CHIP", "minecraft:paper", "Tutorial Garden Chip", "minecraft:paper"),
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = Path(temp_dir) / "84.zip"
+            with zipfile.ZipFile(input_path, "w") as pack:
+                pack.writestr("pack.mcmeta", json.dumps({"pack": {"pack_format": 84, "description": "Original"}}))
+                pack.writestr(
+                    "assets/hypixel_skyblock/items/item/island_relevant/garden/chips/cropshot_chip.json",
+                    json.dumps(
+                        {
+                            "model": {
+                                "type": "minecraft:model",
+                                "model": "hypixel_skyblock:item/island_relevant/garden/chips/cropshot_chip",
+                            }
+                        }
+                    ),
+                )
+
+            output_path = gen_legacy_pack.convert_pack(input_path, index, vanilla_item_models)
+
+            with zipfile.ZipFile(output_path, "r") as output_zip:
+                files, _entries = parse_cats(output_zip.read("pack.cats"))
+
+            expected = {"model": {"type": "minecraft:model", "model": "minecraft:item/paper"}}
+            self.assertEqual(json.loads(files["assets/skyblock/items/cropshot_garden_chip.json"]), expected)
+            self.assertEqual(json.loads(files["assets/skyblock/items/tutorial_garden_chip.json"]), expected)
 
     def test_convert_pack_writes_player_head_item_definitions_and_textures(self) -> None:
         texture_url = "http://textures.minecraft.net/texture/abc123"

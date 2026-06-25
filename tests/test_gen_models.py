@@ -126,6 +126,33 @@ class GenModelsTests(unittest.TestCase):
             '{\n  "SQUEAKY_MOUSEMAT": [\n    "hypixel_skyblock:item/uncategorized/squeaky_mousemat"\n  ]\n}\n',
         )
 
+    def test_generate_model_map_writes_additional_model_targets(self) -> None:
+        index = hypackconverter.RepoIndex()
+        hypackconverter.add_resource_pack_aliases(index)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = Path(temp_dir) / "pack.zip"
+            with zipfile.ZipFile(input_path, "w") as pack:
+                pack.writestr(
+                    "assets/hypixel_skyblock/items/item/island_relevant/garden/chips/cropshot_chip.json",
+                    json.dumps(
+                        {
+                            "model": {
+                                "type": "minecraft:model",
+                                "model": "hypixel_skyblock:item/island_relevant/garden/chips/cropshot_chip",
+                            }
+                        }
+                    ),
+                )
+
+            self.assertEqual(
+                gen_models.generate_model_map(input_path, index),
+                {
+                    "CROPSHOT_GARDEN_CHIP": ["hypixel_skyblock:item/island_relevant/garden/chips/cropshot_chip"],
+                    "TUTORIAL_GARDEN_CHIP": ["hypixel_skyblock:item/island_relevant/garden/chips/cropshot_chip"],
+                },
+            )
+
     def test_generate_model_map_keeps_separate_item_ids_out_of_base_array(self) -> None:
         index = hypackconverter.RepoIndex()
         hypackconverter.add_items(

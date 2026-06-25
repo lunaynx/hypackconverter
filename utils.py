@@ -59,6 +59,9 @@ RESOURCE_PACK_ID_ALIASES = {
     "worn_huntaxe": "venator_genesis",
     "zombie_solider_cutlass": "zombie_soldier_cutlass",
 }
+ADDITIONAL_MODEL_TARGETS = {
+    "cropshot_garden_chip": ("tutorial_garden_chip",),
+}
 
 
 class RepoLoadError(RuntimeError):
@@ -201,6 +204,10 @@ def load_repo_index(base_url: str = REPO_BASE_URL) -> RepoIndex:
 def add_resource_pack_aliases(index: RepoIndex) -> None:
     for resource_pack_id, custom_data_id in RESOURCE_PACK_ID_ALIASES.items():
         index.add_direct(resource_pack_id, custom_data_id)
+
+
+def expand_resolved_paths(path: str) -> tuple[str, ...]:
+    return (path, *ADDITIONAL_MODEL_TARGETS.get(path, ()))
 
 
 def add_items(index: RepoIndex, data: Any) -> None:

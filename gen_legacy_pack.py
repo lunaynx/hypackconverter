@@ -23,6 +23,7 @@ from utils import (
     RepoLoadError,
     add_items,
     add_resource_pack_aliases,
+    expand_resolved_paths,
     fetch_repo_json,
     normalize_zip_path,
 )
@@ -231,8 +232,10 @@ def convert_item_definition(
     else:
         legacy_definition = replace_hypixel_identifiers(parsed, legacy_item_model.model_reference)
 
-    output_path = f"{SKYBLOCK_ITEM_PREFIX}{resolved.path}.json"
-    inner_files[output_path] = json.dumps(legacy_definition, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    encoded = json.dumps(legacy_definition, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    for output_id in expand_resolved_paths(resolved.path):
+        output_path = f"{SKYBLOCK_ITEM_PREFIX}{output_id}.json"
+        inner_files[output_path] = encoded
 
 
 def add_head_texture(

@@ -14,6 +14,7 @@ from utils import (
     RepoIndex,
     RepoLoadError,
     cleanup_state_suffix,
+    expand_resolved_paths,
     load_repo_index,
     normalize_zip_path,
 )
@@ -40,7 +41,8 @@ def generate_model_map(input_path: Path, index: RepoIndex) -> dict[str, list[str
 
             item_models = find_item_models(item_definition)
             if item_models:
-                model_map.setdefault(custom_data_key(resolved.path), set()).update(item_models)
+                for resolved_path in expand_resolved_paths(resolved.path):
+                    model_map.setdefault(custom_data_key(resolved_path), set()).update(item_models)
 
     return {custom_data_id: sort_item_models(item_models) for custom_data_id, item_models in sorted(model_map.items())}
 

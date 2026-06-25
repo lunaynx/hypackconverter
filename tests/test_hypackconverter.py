@@ -238,6 +238,13 @@ class IdResolutionTests(unittest.TestCase):
             with self.subTest(resource_pack_id=resource_pack_id):
                 self.assertEqual(index.resolve(resource_pack_id), hypackconverter.ResolvedId(custom_data_id, "direct"))
 
+    def test_additional_model_targets(self) -> None:
+        self.assertEqual(
+            hypackconverter.expand_resolved_paths("cropshot_garden_chip"),
+            ("cropshot_garden_chip", "tutorial_garden_chip"),
+        )
+        self.assertEqual(hypackconverter.expand_resolved_paths("cactus_knife_3"), ("cactus_knife_3",))
+
     def test_rising_sun_items_use_plain_and_generals_resource_pack_ids(self) -> None:
         index = hypackconverter.RepoIndex()
         hypackconverter.add_items(
@@ -336,6 +343,29 @@ class ConversionTests(unittest.TestCase):
                 entries["assets/hypixel_skyblock/models/item/a.json"][0],
                 entries["assets/hypixel_skyblock/textures/item/a.png"][0],
             )
+
+    def test_conversion_writes_additional_model_targets(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = Path(temp_dir) / "84.zip"
+            with zipfile.ZipFile(input_path, "w") as pack:
+                pack.writestr("pack.mcmeta", json.dumps({"pack": {"pack_format": 84, "description": "Original"}}))
+                pack.writestr(
+                    "assets/hypixel_skyblock/items/item/island_relevant/garden/chips/cropshot_chip.json",
+                    json.dumps(
+                        {"model": {"type": "minecraft:model", "model": "hypixel_skyblock:item/chips/cropshot_chip"}}
+                    ),
+                )
+
+            index = hypackconverter.RepoIndex()
+            hypackconverter.add_resource_pack_aliases(index)
+            output_path = hypackconverter.convert_pack(input_path, index)
+
+            with zipfile.ZipFile(output_path, "r") as output_zip:
+                files, _entries = parse_cats(output_zip.read("pack.cats"))
+
+            expected = {"model": {"type": "minecraft:model", "model": "hypixel_skyblock:item/chips/cropshot_chip"}}
+            self.assertEqual(json.loads(files["assets/skyblock/items/cropshot_garden_chip.json"]), expected)
+            self.assertEqual(json.loads(files["assets/skyblock/items/tutorial_garden_chip.json"]), expected)
 
 
 if __name__ == "__main__":

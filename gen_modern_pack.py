@@ -36,6 +36,7 @@ from utils import (
     component_to_text,
     direct_id_candidates,
     drop_possessive_s_variants,
+    expand_resolved_paths,
     fetch_repo_json,
     load_repo_index,
     normalize_name,
@@ -86,8 +87,10 @@ def convert_item_definition(path: str, data: bytes, index: RepoIndex, inner_file
         warn_unmapped(path, f"invalid JSON: {exc}")
         return
 
-    output_path = f"{SKYBLOCK_ITEM_PREFIX}{resolved.path}.json"
-    inner_files[output_path] = json.dumps(parsed, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    encoded = json.dumps(parsed, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    for output_id in expand_resolved_paths(resolved.path):
+        output_path = f"{SKYBLOCK_ITEM_PREFIX}{output_id}.json"
+        inner_files[output_path] = encoded
 
 
 def warn_unmapped(path: str, reason: str) -> None:
