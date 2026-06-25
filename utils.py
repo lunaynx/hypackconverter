@@ -35,6 +35,7 @@ FORMAT_CODE_PATTERN = re.compile(r"\u00a7.")
 NON_WORD_PATTERN = re.compile(r"[^a-z0-9]+")
 APOSTROPHE_PATTERN = re.compile(r"['\u2019]")
 FRAGGED_PREFIX = "\u269a"
+RISING_SUN_SUFFIX = " of the Rising Sun"
 RESOURCE_PACK_ID_ALIASES = {
     "bouqet_of_lies": "bouquet_of_lies",
     "cropshot_chip": "cropshot_garden_chip",
@@ -221,7 +222,24 @@ def add_items(index: RepoIndex, data: Any) -> None:
 
         target = item_id.lower()
         index.add_direct(item_id, target)
-        index.add_name(components.get("minecraft:custom_name", ""), target)
+        custom_name = components.get("minecraft:custom_name", "")
+        index.add_name(custom_name, target)
+        add_rising_sun_alias(index, item_id, custom_name, target)
+
+
+def add_rising_sun_alias(index: RepoIndex, item_id: str, name: object, target: str) -> None:
+    text = strip_formatting(component_to_text(name)).strip()
+    if not text.endswith(RISING_SUN_SUFFIX):
+        return
+
+    normalized = normalize_name(text)
+    if not normalized:
+        return
+
+    if item_id.startswith("GENERALS_"):
+        index.add_direct(f"{normalized}_2", target)
+    else:
+        index.add_direct(normalized, target)
 
 
 def add_keyed_repo(index: RepoIndex, data: Any, path_prefix: str, *, name_fields: Iterable[str]) -> None:

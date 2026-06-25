@@ -238,6 +238,41 @@ class IdResolutionTests(unittest.TestCase):
             with self.subTest(resource_pack_id=resource_pack_id):
                 self.assertEqual(index.resolve(resource_pack_id), hypackconverter.ResolvedId(custom_data_id, "direct"))
 
+    def test_rising_sun_items_use_plain_and_generals_resource_pack_ids(self) -> None:
+        index = hypackconverter.RepoIndex()
+        hypackconverter.add_items(
+            index,
+            [
+                item("HOPE_OF_THE_RESISTANCE", "Staff of the Rising Sun"),
+                item("GENERALS_HOPE_OF_THE_RESISTANCE", "Staff of the Rising Sun"),
+                item("ARMOR_OF_THE_RESISTANCE_HELMET", "Helmet of the Rising Sun"),
+                item("GENERALS_ARMOR_OF_THE_RESISTANCE_HELMET", "Helmet of the Rising Sun"),
+                item("STAFF_OF_THE_RISING_MOON", "Staff of the Rising Moon"),
+            ],
+        )
+
+        self.assertEqual(
+            index.resolve("staff_of_the_rising_sun"),
+            hypackconverter.ResolvedId("hope_of_the_resistance", "direct"),
+        )
+        self.assertEqual(
+            index.resolve("staff_of_the_rising_sun_2"),
+            hypackconverter.ResolvedId("generals_hope_of_the_resistance", "direct"),
+        )
+        self.assertEqual(
+            index.resolve("helmet_of_the_rising_sun"),
+            hypackconverter.ResolvedId("armor_of_the_resistance_helmet", "direct"),
+        )
+        self.assertEqual(
+            index.resolve("helmet_of_the_rising_sun_2"),
+            hypackconverter.ResolvedId("generals_armor_of_the_resistance_helmet", "direct"),
+        )
+        self.assertEqual(
+            index.resolve("staff_of_the_rising_moon"),
+            hypackconverter.ResolvedId("staff_of_the_rising_moon", "direct"),
+        )
+        self.assertIsNone(index.resolve("staff_of_the_rising_moon_2"))
+
 
 class ConversionTests(unittest.TestCase):
     def test_conversion_archive_output_and_warnings(self) -> None:
