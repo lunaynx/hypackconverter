@@ -53,10 +53,22 @@ def build_vanilla_item_models(items: Sequence[object]) -> dict[str, str]:
         vanilla_item_model = components.get("minecraft:item_model")
         if not isinstance(vanilla_item_model, str):
             vanilla_item_model = item.get("id")
-        if isinstance(vanilla_item_model, str) and vanilla_item_model.startswith("minecraft:"):
-            vanilla_item_models[custom_data_id.lower()] = vanilla_item_model
+        if isinstance(vanilla_item_model, str):
+            vanilla_model_reference = vanilla_item_model_reference(vanilla_item_model)
+            if vanilla_model_reference is not None:
+                vanilla_item_models[custom_data_id.lower()] = vanilla_model_reference
 
     return vanilla_item_models
+
+
+def vanilla_item_model_reference(identifier: str) -> str | None:
+    if not identifier.startswith("minecraft:"):
+        return None
+
+    namespace, path = identifier.split(":", 1)
+    if path.startswith("item/"):
+        return identifier
+    return f"{namespace}:item/{path}"
 
 
 def convert_pack(input_path: Path, index: RepoIndex, vanilla_item_models: Mapping[str, str]) -> Path:

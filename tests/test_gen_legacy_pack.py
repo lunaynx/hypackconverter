@@ -30,11 +30,13 @@ class GenLegacyPackTests(unittest.TestCase):
                 [
                     repo_item("CUSTOM_GOAT", "minecraft:paper", "Custom Goat", "minecraft:goat_horn"),
                     repo_item("CUSTOM_SWORD", "minecraft:diamond_sword", "Custom Sword"),
+                    repo_item("CUSTOM_STICK", "minecraft:paper", "Custom Stick", "minecraft:item/stick"),
                 ]
             ),
             {
-                "custom_goat": "minecraft:goat_horn",
-                "custom_sword": "minecraft:diamond_sword",
+                "custom_goat": "minecraft:item/goat_horn",
+                "custom_sword": "minecraft:item/diamond_sword",
+                "custom_stick": "minecraft:item/stick",
             },
         )
 
@@ -95,11 +97,11 @@ class GenLegacyPackTests(unittest.TestCase):
                         "type": "minecraft:condition",
                         "on_false": {
                             "type": "minecraft:model",
-                            "model": "minecraft:fishing_rod",
+                            "model": "minecraft:item/fishing_rod",
                         },
                         "on_true": {
                             "type": "minecraft:model",
-                            "model": "minecraft:fishing_rod",
+                            "model": "minecraft:item/fishing_rod",
                         },
                     }
                 },
@@ -109,7 +111,7 @@ class GenLegacyPackTests(unittest.TestCase):
                 {
                     "model": {
                         "type": "minecraft:model",
-                        "model": "minecraft:goat_horn",
+                        "model": "minecraft:item/goat_horn",
                     }
                 },
             )
