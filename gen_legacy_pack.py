@@ -33,6 +33,9 @@ LEGACY_REPO_BASE_URL = (
 )
 SKYBLOCK_ITEM_PREFIX = "assets/skyblock/items/"
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+VANILLA_BLOCK_MODEL_ITEMS = {
+    "minecraft:dark_prismarine",
+}
 
 
 @dataclass(frozen=True)
@@ -106,6 +109,8 @@ def vanilla_item_model_reference(identifier: str) -> str | None:
         return None
 
     namespace, path = identifier.split(":", 1)
+    if identifier in VANILLA_BLOCK_MODEL_ITEMS:
+        return f"{namespace}:block/{path}"
     if path.startswith("item/"):
         return identifier
     return f"{namespace}:item/{path}"

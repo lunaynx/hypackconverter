@@ -69,12 +69,14 @@ class GenLegacyPackTests(unittest.TestCase):
                     repo_item("CUSTOM_GOAT", "minecraft:paper", "Custom Goat", "minecraft:goat_horn"),
                     repo_item("CUSTOM_SWORD", "minecraft:diamond_sword", "Custom Sword"),
                     repo_item("CUSTOM_STICK", "minecraft:paper", "Custom Stick", "minecraft:item/stick"),
+                    repo_item("PRISMAPUMP", "minecraft:dark_prismarine", "Prismapump"),
                 ]
             ),
             {
                 "custom_goat": gen_legacy_pack.LegacyItemModel("minecraft:item/goat_horn"),
                 "custom_sword": gen_legacy_pack.LegacyItemModel("minecraft:item/diamond_sword"),
                 "custom_stick": gen_legacy_pack.LegacyItemModel("minecraft:item/stick"),
+                "prismapump": gen_legacy_pack.LegacyItemModel("minecraft:block/dark_prismarine"),
             },
         )
 
@@ -176,6 +178,44 @@ class GenLegacyPackTests(unittest.TestCase):
                 },
             )
             self.assertNotIn("assets/hypixel_skyblock/models/item/unused.json", files)
+
+    def test_convert_pack_uses_block_models_for_vanilla_block_items(self) -> None:
+        index, vanilla_item_models = gen_legacy_pack.load_legacy_repo_from_items(
+            [
+                repo_item("PRISMAPUMP", "minecraft:dark_prismarine", "Prismapump"),
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = Path(temp_dir) / "84.zip"
+            with zipfile.ZipFile(input_path, "w") as pack:
+                pack.writestr("pack.mcmeta", json.dumps({"pack": {"pack_format": 84, "description": "Original"}}))
+                pack.writestr(
+                    "assets/hypixel_skyblock/items/item/uncategorized/prismapump.json",
+                    json.dumps(
+                        {
+                            "model": {
+                                "type": "minecraft:model",
+                                "model": "hypixel_skyblock:item/uncategorized/prismapump",
+                            }
+                        }
+                    ),
+                )
+
+            output_path = gen_legacy_pack.convert_pack(input_path, index, vanilla_item_models)
+
+            with zipfile.ZipFile(output_path, "r") as output_zip:
+                files, _entries = parse_cats(output_zip.read("pack.cats"))
+
+            self.assertEqual(
+                json.loads(files["assets/skyblock/items/prismapump.json"]),
+                {
+                    "model": {
+                        "type": "minecraft:model",
+                        "model": "minecraft:block/dark_prismarine",
+                    }
+                },
+            )
 
     def test_convert_pack_writes_additional_model_targets(self) -> None:
         index, vanilla_item_models = gen_legacy_pack.load_legacy_repo_from_items(
