@@ -92,7 +92,8 @@ class GenLegacyPackTests(unittest.TestCase):
                     "minecraft:item/template_skull",
                     gen_legacy_pack.HeadTexture(
                         url=texture_url,
-                        pack_path=f"assets/minecraft/textures/skins/{hashlib.sha1(b'abc123').hexdigest()}.png",
+                        texture_id=f"minecraft:skyblock/heads/{hashlib.sha1(b'abc123').hexdigest()}",
+                        pack_path=f"assets/minecraft/textures/entity/skyblock/heads/{hashlib.sha1(b'abc123').hexdigest()}.png",
                     ),
                     True,
                 )
@@ -243,12 +244,19 @@ class GenLegacyPackTests(unittest.TestCase):
             with zipfile.ZipFile(output_path, "r") as output_zip:
                 files, _entries = parse_cats(output_zip.read("pack.cats"))
 
-            texture_path = f"assets/minecraft/textures/skins/{hashlib.sha1(b'abc123').hexdigest()}.png"
+            texture_hash = hashlib.sha1(b"abc123").hexdigest()
+            texture_path = f"assets/minecraft/textures/entity/skyblock/heads/{texture_hash}.png"
             self.assertEqual(fetched_urls, [texture_url])
             self.assertEqual(files[texture_path], PNG_BYTES)
             self.assertEqual(
                 json.loads(files["assets/skyblock/items/head_item.json"]),
-                gen_legacy_pack.player_head_item_definition(),
+                gen_legacy_pack.player_head_item_definition(
+                    gen_legacy_pack.HeadTexture(
+                        url=texture_url,
+                        texture_id=f"minecraft:skyblock/heads/{texture_hash}",
+                        pack_path=texture_path,
+                    )
+                ),
             )
 
     def test_convert_pack_uses_player_head_model_without_texture_data(self) -> None:
@@ -283,7 +291,7 @@ class GenLegacyPackTests(unittest.TestCase):
                 json.loads(files["assets/skyblock/items/head_item.json"]),
                 gen_legacy_pack.player_head_item_definition(),
             )
-            self.assertFalse(any(path.startswith("assets/minecraft/textures/skins/") for path in files))
+            self.assertFalse(any(path.startswith("assets/minecraft/textures/entity/skyblock/heads/") for path in files))
 
 
 if __name__ == "__main__":

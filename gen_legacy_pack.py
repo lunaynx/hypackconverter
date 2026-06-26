@@ -38,6 +38,7 @@ PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 @dataclass(frozen=True)
 class HeadTexture:
     url: str
+    texture_id: str
     pack_path: str
 
 
@@ -140,8 +141,11 @@ def decode_head_texture(profile: object) -> HeadTexture | None:
             return None
 
         texture_hash = texture_hash_from_url(url)
-        texture_id = hashlib.sha1(texture_hash.encode("utf-8")).hexdigest()
-        return HeadTexture(url=url, pack_path=f"assets/minecraft/textures/skins/{texture_id}.png")
+        texture_id = f"minecraft:skyblock/heads/{hashlib.sha1(texture_hash.encode('utf-8')).hexdigest()}"
+        texture_path = texture_id.split(":", 1)[1]
+        return HeadTexture(
+            url=url, texture_id=texture_id, pack_path=f"assets/minecraft/textures/entity/{texture_path}.png"
+        )
 
     return None
 
@@ -228,7 +232,7 @@ def convert_item_definition(
     if legacy_item_model.is_player_head:
         if legacy_item_model.head_texture is not None:
             add_head_texture(inner_files, legacy_item_model.head_texture, texture_fetcher)
-        legacy_definition = player_head_item_definition()
+        legacy_definition = player_head_item_definition(legacy_item_model.head_texture)
     else:
         legacy_definition = replace_hypixel_identifiers(parsed, legacy_item_model.model_reference)
 
@@ -245,14 +249,23 @@ def add_head_texture(
         inner_files[head_texture.pack_path] = texture_fetcher(head_texture.url)
 
 
-def player_head_item_definition() -> dict[str, object]:
+def player_head_item_definition(head_texture: HeadTexture | None = None) -> dict[str, object]:
+    model = (
+        {
+            "type": "minecraft:head",
+            "kind": "player",
+            "texture": head_texture.texture_id,
+        }
+        if head_texture is not None
+        else {
+            "type": "minecraft:player_head",
+        }
+    )
     return {
         "model": {
             "type": "minecraft:special",
             "base": "minecraft:item/template_skull",
-            "model": {
-                "type": "minecraft:player_head",
-            },
+            "model": model,
             "transformation": {
                 "left_rotation": [1.0, 0.0, 0.0, -0.0],
                 "right_rotation": [0.0, 0.0, 0.0, 1.0],
