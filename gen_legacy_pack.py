@@ -21,9 +21,11 @@ from utils import (
     REPO_USER_AGENT,
     RepoIndex,
     RepoLoadError,
+    add_hypixel_items,
     add_items,
     add_resource_pack_aliases,
     expand_resolved_paths,
+    fetch_hypixel_items,
     fetch_repo_json,
     normalize_zip_path,
 )
@@ -35,6 +37,10 @@ SKYBLOCK_ITEM_PREFIX = "assets/skyblock/items/"
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 VANILLA_BLOCK_MODEL_ITEMS = {
     "minecraft:dark_prismarine",
+}
+HYPIXEL_MATERIAL_ALIASES = {
+    "gold": "golden",
+    "wood": "wooden",
 }
 
 
@@ -54,17 +60,27 @@ class LegacyItemModel:
 
 def load_legacy_repo(base_url: str = LEGACY_REPO_BASE_URL) -> tuple[RepoIndex, dict[str, LegacyItemModel]]:
     items = fetch_repo_json("items.min.json", base_url)
-    return load_legacy_repo_from_items(items)
+    hypixel_items = fetch_hypixel_items()
+    return load_legacy_repo_from_items(items, hypixel_items)
 
 
-def load_legacy_repo_from_items(items: object) -> tuple[RepoIndex, dict[str, LegacyItemModel]]:
+def load_legacy_repo_from_items(
+    items: object, hypixel_items: object | None = None
+) -> tuple[RepoIndex, dict[str, LegacyItemModel]]:
     if not isinstance(items, list):
         raise RepoLoadError("items.min.json did not contain an item list")
 
     index = RepoIndex()
     add_items(index, items)
+    if hypixel_items is not None:
+        add_hypixel_items(index, hypixel_items)
     add_resource_pack_aliases(index)
-    return index, build_vanilla_item_models(items)
+
+    vanilla_item_models = build_vanilla_item_models(items)
+    if hypixel_items is not None:
+        add_hypixel_vanilla_item_models(vanilla_item_models, hypixel_items)
+
+    return index, vanilla_item_models
 
 
 def build_vanilla_item_models(items: Sequence[object]) -> dict[str, LegacyItemModel]:
@@ -114,6 +130,42 @@ def vanilla_item_model_reference(identifier: str) -> str | None:
     if path.startswith("item/"):
         return identifier
     return f"{namespace}:item/{path}"
+
+
+def add_hypixel_vanilla_item_models(vanilla_item_models: dict[str, LegacyItemModel], data: object) -> None:
+    if not isinstance(data, Mapping):
+        raise RepoLoadError("Hypixel SkyBlock items response did not contain an object")
+    if data.get("success") is not True:
+        raise RepoLoadError("Hypixel SkyBlock items response was not successful")
+
+    items = data.get("items")
+    if not isinstance(items, list):
+        raise RepoLoadError("Hypixel SkyBlock items response did not contain an item list")
+
+    for item in items:
+        if not isinstance(item, Mapping):
+            continue
+
+        item_id = item.get("id")
+        material = item.get("material")
+        if not isinstance(item_id, str) or not item_id or not isinstance(material, str) or not material:
+            continue
+
+        target = item_id.lower()
+        if target in vanilla_item_models:
+            continue
+
+        minecraft_id = minecraft_id_from_hypixel_material(material)
+        vanilla_model_reference = vanilla_item_model_reference(minecraft_id)
+        if vanilla_model_reference is not None:
+            vanilla_item_models[target] = LegacyItemModel(vanilla_model_reference)
+
+
+def minecraft_id_from_hypixel_material(material: str) -> str:
+    parts = material.casefold().split("_")
+    if parts:
+        parts[0] = HYPIXEL_MATERIAL_ALIASES.get(parts[0], parts[0])
+    return f"minecraft:{'_'.join(parts)}"
 
 
 def decode_head_texture(profile: object) -> HeadTexture | None:

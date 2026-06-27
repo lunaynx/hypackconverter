@@ -9,7 +9,8 @@ import zipfile
 from pathlib import Path
 
 import gen_legacy_pack
-from tests.test_hypackconverter import parse_cats
+from tests.test_hypackconverter import hypixel_item as api_item
+from tests.test_hypackconverter import hypixel_payload, parse_cats
 from utils import ResolvedId
 
 PNG_BYTES = b"\x89PNG\r\n\x1a\nfake"
@@ -79,6 +80,32 @@ class GenLegacyPackTests(unittest.TestCase):
                 "prismapump": gen_legacy_pack.LegacyItemModel("minecraft:block/dark_prismarine"),
             },
         )
+
+    def test_load_legacy_repo_uses_hypixel_fallback_items(self) -> None:
+        index, vanilla_item_models = gen_legacy_pack.load_legacy_repo_from_items(
+            [],
+            hypixel_payload(
+                [
+                    api_item("PROMISING_HOE", "Promising Hoe", "IRON_HOE"),
+                    api_item("ZOOM_PICKAXE", "Zoom", "WOOD_PICKAXE"),
+                    api_item("SWEEP_AXE", "Sweep Axe", "IRON_AXE"),
+                    api_item("RAYGUN", "Raygun", "BOW"),
+                ]
+            ),
+        )
+
+        self.assertEqual(index.resolve("promising_hoe"), ResolvedId("promising_hoe", "direct"))
+        self.assertEqual(index.resolve("zoom"), ResolvedId("zoom_pickaxe", "display name"))
+        self.assertEqual(index.resolve("sweep_axe"), ResolvedId("sweep_axe", "direct"))
+        self.assertEqual(index.resolve("ray_gun"), ResolvedId("raygun", "direct"))
+        self.assertEqual(
+            vanilla_item_models["promising_hoe"], gen_legacy_pack.LegacyItemModel("minecraft:item/iron_hoe")
+        )
+        self.assertEqual(
+            vanilla_item_models["zoom_pickaxe"], gen_legacy_pack.LegacyItemModel("minecraft:item/wooden_pickaxe")
+        )
+        self.assertEqual(vanilla_item_models["sweep_axe"], gen_legacy_pack.LegacyItemModel("minecraft:item/iron_axe"))
+        self.assertEqual(vanilla_item_models["raygun"], gen_legacy_pack.LegacyItemModel("minecraft:item/bow"))
 
     def test_build_vanilla_item_models_decodes_player_head_textures(self) -> None:
         texture_url = "http://textures.minecraft.net/texture/abc123"

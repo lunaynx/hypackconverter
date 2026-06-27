@@ -14,6 +14,7 @@ from typing import Any
 from unittest import mock
 
 import gen_modern_pack as hypackconverter
+from utils import HYPIXEL_ITEMS_URL
 
 
 def repo_payloads(items: list[dict[str, Any]] | None = None) -> dict[str, Any]:
@@ -68,9 +69,28 @@ class FakeResponse:
         return self.payload
 
 
-def mocked_urlopen(payloads: dict[str, Any]) -> mock.Mock:
+def hypixel_payload(items: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    return {
+        "success": True,
+        "items": items if items is not None else [],
+    }
+
+
+def hypixel_item(item_id: str, name: str, material: str = "STONE") -> dict[str, Any]:
+    return {
+        "id": item_id,
+        "name": name,
+        "material": material,
+    }
+
+
+def mocked_urlopen(payloads: dict[str, Any], hypixel: dict[str, Any] | None = None) -> mock.Mock:
     def open_request(request: urllib.request.Request, timeout: int = 0) -> FakeResponse:
         assert timeout == 30
+        if request.full_url == HYPIXEL_ITEMS_URL:
+            assert request.get_header("User-agent") is None
+            return FakeResponse(json.dumps(hypixel or hypixel_payload()).encode("utf-8"))
+
         assert request.get_header("User-agent") == hypackconverter.REPO_USER_AGENT
         filename = request.full_url.rsplit("/", 1)[-1]
         return FakeResponse(json.dumps(payloads[filename]).encode("utf-8"))
@@ -117,17 +137,29 @@ def read_u32(stream: io.BytesIO) -> int:
 
 class RepoLoadingTests(unittest.TestCase):
     def test_load_repo_sends_user_agent_and_parses_all_shapes(self) -> None:
-        opener = mocked_urlopen(repo_payloads())
+        opener = mocked_urlopen(
+            repo_payloads(),
+            hypixel_payload(
+                [
+                    hypixel_item("PROMISING_HOE", "Promising Hoe", "IRON_HOE"),
+                    hypixel_item("ZOOM_PICKAXE", "Zoom", "WOOD_PICKAXE"),
+                    hypixel_item("SWEEP_AXE", "Sweep Axe", "IRON_AXE"),
+                ]
+            ),
+        )
         with mock.patch("urllib.request.urlopen", opener):
             index = hypackconverter.load_repo_index("https://example.test/")
 
-        self.assertEqual(opener.call_count, len(hypackconverter.REPO_FILES))
+        self.assertEqual(opener.call_count, len(hypackconverter.REPO_FILES) + 1)
         self.assertEqual(index.direct["cactus_knife_3"], "cactus_knife_3")
         self.assertEqual(index.direct["absorb"], "enchantments/absorb")
         self.assertEqual(index.direct["ammonite"], "pets/ammonite")
         self.assertEqual(index.direct["antlers"], "runes/antlers")
         self.assertEqual(index.direct["potion_absorption"], "potions/potion_absorption")
         self.assertEqual(index.direct["shard_hideonring"], "attributes/shard_hideonring")
+        self.assertEqual(index.direct["promising_hoe"], "promising_hoe")
+        self.assertEqual(index.resolve("zoom"), hypackconverter.ResolvedId("zoom_pickaxe", "display name"))
+        self.assertEqual(index.direct["sweep_axe"], "sweep_axe")
 
     def test_load_repo_fails_cleanly_on_http_error(self) -> None:
         with mock.patch("urllib.request.urlopen", side_effect=urllib.error.URLError("offline")):
@@ -228,6 +260,15 @@ class IdResolutionTests(unittest.TestCase):
         self.assertEqual(
             self.index.resolve("rod_of_legends_cast"),
             hypackconverter.ResolvedId("legend_rod", "display name"),
+        )
+
+    def test_head_animated_suffix_stripping(self) -> None:
+        index = hypackconverter.RepoIndex()
+        hypackconverter.add_items(index, [item("DIVAN_DRILL", "Divan's Drill")])
+
+        self.assertEqual(
+            index.resolve("divans_drill_head_animated"),
+            hypackconverter.ResolvedId("divan_drill", "direct"),
         )
 
     def test_manual_resource_pack_aliases(self) -> None:

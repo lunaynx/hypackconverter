@@ -11,6 +11,7 @@ from typing import Any
 
 REPO_BASE_URL = "https://skyblock-api-repo.thatgravyboat.tech/1_21_5/"
 REPO_USER_AGENT = "Repolib"
+HYPIXEL_ITEMS_URL = "https://api.hypixel.net/v2/resources/skyblock/items"
 REPO_FILES = (
     "items.min.json",
     "enchantments.min.json",
@@ -23,6 +24,7 @@ REPO_FILES = (
 ITEM_DEFINITION_PREFIX = "assets/hypixel_skyblock/items/"
 SKYBLOCK_ITEM_PREFIX = "assets/skyblock/items/"
 STATE_SUFFIXES = (
+    "_head_animated",
     "_pulling_0",
     "_pulling_1",
     "_pulling_2",
@@ -37,6 +39,9 @@ APOSTROPHE_PATTERN = re.compile(r"['\u2019]")
 FRAGGED_PREFIX = "\u269a"
 RISING_SUN_SUFFIX = " of the Rising Sun"
 RESOURCE_PACK_ID_ALIASES = {
+    "admin_bow": "admin_bow",
+    "admin_chisel": "admin_chisel",
+    "admin_vacuum": "admin_vacuum",
     "bouqet_of_lies": "bouquet_of_lies",
     "cropshot_chip": "cropshot_garden_chip",
     "endstone_blade": "end_stone_sword",
@@ -48,6 +53,7 @@ RESOURCE_PACK_ID_ALIASES = {
     "magmafish_gold": "magma_fish_gold",
     "magmafish_silver": "magma_fish_silver",
     "prime_huntaxe": "nex_titanum",
+    "ray_gun": "raygun",
     "reinforced_huntaxe": "cursus_ferae",
     "savage_huntaxe": "apex_praedator",
     "sharpened_huntaxe": "silva_dominus",
@@ -182,9 +188,21 @@ def fetch_repo_json(filename: str, base_url: str = REPO_BASE_URL) -> Any:
         raise RepoLoadError(f"could not parse {filename}: {exc}") from exc
 
 
+def fetch_hypixel_items(url: str = HYPIXEL_ITEMS_URL) -> Any:
+    request = urllib.request.Request(url)
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        raise RepoLoadError(f"could not download Hypixel SkyBlock items: {exc}") from exc
+    except json.JSONDecodeError as exc:
+        raise RepoLoadError(f"could not parse Hypixel SkyBlock items: {exc}") from exc
+
+
 def load_repo_index(base_url: str = REPO_BASE_URL) -> RepoIndex:
     try:
         repo_data = {filename: fetch_repo_json(filename, base_url) for filename in REPO_FILES}
+        hypixel_data = fetch_hypixel_items()
     except RepoLoadError:
         raise
     except Exception as exc:
@@ -197,6 +215,7 @@ def load_repo_index(base_url: str = REPO_BASE_URL) -> RepoIndex:
     add_runes(index, repo_data["runes.min.json"])
     add_keyed_repo(index, repo_data["potions.min.json"], "potions", name_fields=("name",))
     add_attributes(index, repo_data["attributes.min.json"])
+    add_hypixel_items(index, hypixel_data)
     add_resource_pack_aliases(index)
     return index
 
@@ -232,6 +251,34 @@ def add_items(index: RepoIndex, data: Any) -> None:
         custom_name = components.get("minecraft:custom_name", "")
         index.add_name(custom_name, target)
         add_rising_sun_alias(index, item_id, custom_name, target)
+
+
+def add_hypixel_items(index: RepoIndex, data: Any) -> None:
+    if not isinstance(data, Mapping):
+        raise RepoLoadError("Hypixel SkyBlock items response did not contain an object")
+    if data.get("success") is not True:
+        raise RepoLoadError("Hypixel SkyBlock items response was not successful")
+
+    items = data.get("items")
+    if not isinstance(items, list):
+        raise RepoLoadError("Hypixel SkyBlock items response did not contain an item list")
+
+    known_targets = set(index.direct.values())
+    for item in items:
+        if not isinstance(item, Mapping):
+            continue
+
+        item_id = item.get("id")
+        if not isinstance(item_id, str) or not item_id:
+            continue
+
+        target = item_id.lower()
+        if target in known_targets:
+            continue
+
+        index.add_direct(item_id, target)
+        index.add_name(item.get("name", ""), target)
+        known_targets.add(target)
 
 
 def add_rising_sun_alias(index: RepoIndex, item_id: str, name: object, target: str) -> None:
