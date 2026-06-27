@@ -283,6 +283,20 @@ class IdResolutionTests(unittest.TestCase):
             with self.subTest(resource_pack_id=resource_pack_id):
                 self.assertEqual(index.resolve(resource_pack_id), hypackconverter.ResolvedId(custom_data_id, "direct"))
 
+    def test_sulphur_resource_pack_aliases_disambiguate_inconsistent_names(self) -> None:
+        index = hypackconverter.RepoIndex()
+        hypackconverter.add_items(
+            index,
+            [
+                item("SULPHUR", "Gunpowder"),
+                item("SULPHUR_ORE", "Sulphur"),
+            ],
+        )
+        hypackconverter.add_resource_pack_aliases(index)
+
+        self.assertEqual(index.resolve("sulphur"), hypackconverter.ResolvedId("sulphur_ore", "direct"))
+        self.assertEqual(index.resolve("gunpowder"), hypackconverter.ResolvedId("sulphur", "direct"))
+
     def test_additional_model_targets(self) -> None:
         self.assertEqual(
             hypackconverter.expand_resolved_paths("cropshot_garden_chip"),
