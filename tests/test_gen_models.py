@@ -97,6 +97,63 @@ class GenModelsTests(unittest.TestCase):
                 },
             )
 
+    def test_generate_model_map_can_use_display_names(self) -> None:
+        index = hypackconverter.RepoIndex()
+        hypackconverter.add_items(
+            index,
+            [
+                item("SQUEAKY_MOUSEMAT", "\u00a7aSqueaky Mousemat"),
+                item("LEGEND_ROD", "\u00a76Rod of Legends"),
+            ],
+        )
+        index.add_direct("UNKNOWN_NAME", "unknown_name")
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = Path(temp_dir) / "pack.zip"
+            with zipfile.ZipFile(input_path, "w") as pack:
+                pack.writestr(
+                    "assets/hypixel_skyblock/items/item/uncategorized/squeaky_mousemat.json",
+                    json.dumps(
+                        {
+                            "model": {
+                                "type": "minecraft:model",
+                                "model": "hypixel_skyblock:item/uncategorized/squeaky_mousemat",
+                            }
+                        }
+                    ),
+                )
+                pack.writestr(
+                    "assets/hypixel_skyblock/items/item/fishing/rod/rod_of_legends.json",
+                    json.dumps(
+                        {
+                            "model": {
+                                "type": "minecraft:model",
+                                "model": "hypixel_skyblock:item/fishing/rod/rod_of_legends",
+                            }
+                        }
+                    ),
+                )
+                pack.writestr(
+                    "assets/hypixel_skyblock/items/item/uncategorized/unknown_name.json",
+                    json.dumps(
+                        {
+                            "model": {
+                                "type": "minecraft:model",
+                                "model": "hypixel_skyblock:item/uncategorized/unknown_name",
+                            }
+                        }
+                    ),
+                )
+
+            self.assertEqual(
+                gen_models.generate_model_map(input_path, index, use_names=True),
+                {
+                    "Rod of Legends": ["hypixel_skyblock:item/fishing/rod/rod_of_legends"],
+                    "Squeaky Mousemat": ["hypixel_skyblock:item/uncategorized/squeaky_mousemat"],
+                    "UNKNOWN_NAME": ["hypixel_skyblock:item/uncategorized/unknown_name"],
+                },
+            )
+
     def test_main_prints_pretty_json_to_stdout(self) -> None:
         index = hypackconverter.RepoIndex()
         hypackconverter.add_items(index, [item("SQUEAKY_MOUSEMAT", "Squeaky Mousemat")])
@@ -124,6 +181,35 @@ class GenModelsTests(unittest.TestCase):
         self.assertEqual(
             stdout.getvalue(),
             '{\n  "SQUEAKY_MOUSEMAT": [\n    "hypixel_skyblock:item/uncategorized/squeaky_mousemat"\n  ]\n}\n',
+        )
+
+    def test_main_names_option_prints_display_names_to_stdout(self) -> None:
+        index = hypackconverter.RepoIndex()
+        hypackconverter.add_items(index, [item("SQUEAKY_MOUSEMAT", "Squeaky Mousemat")])
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = Path(temp_dir) / "pack.zip"
+            with zipfile.ZipFile(input_path, "w") as pack:
+                pack.writestr(
+                    "assets/hypixel_skyblock/items/item/uncategorized/squeaky_mousemat.json",
+                    json.dumps(
+                        {
+                            "model": {
+                                "type": "minecraft:model",
+                                "model": "hypixel_skyblock:item/uncategorized/squeaky_mousemat",
+                            }
+                        }
+                    ),
+                )
+
+            stdout = io.StringIO()
+            with mock.patch("gen_models.load_repo_index", return_value=index), redirect_stdout(stdout):
+                exit_code = gen_models.main(["--names", str(input_path)])
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(
+            stdout.getvalue(),
+            '{\n  "Squeaky Mousemat": [\n    "hypixel_skyblock:item/uncategorized/squeaky_mousemat"\n  ]\n}\n',
         )
 
     def test_generate_model_map_writes_additional_model_targets(self) -> None:

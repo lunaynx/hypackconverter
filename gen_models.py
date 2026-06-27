@@ -20,7 +20,7 @@ from utils import (
 )
 
 
-def generate_model_map(input_path: Path, index: RepoIndex) -> dict[str, list[str]]:
+def generate_model_map(input_path: Path, index: RepoIndex, *, use_names: bool = False) -> dict[str, list[str]]:
     model_map: dict[str, set[str]] = {}
     with zipfile.ZipFile(input_path, "r") as source_zip:
         for info in source_zip.infolist():
@@ -42,9 +42,17 @@ def generate_model_map(input_path: Path, index: RepoIndex) -> dict[str, list[str
             item_models = find_item_models(item_definition)
             if item_models:
                 for resolved_path in expand_resolved_paths(resolved.path):
-                    model_map.setdefault(custom_data_key(resolved_path), set()).update(item_models)
+                    model_map.setdefault(model_map_key(resolved_path, index, use_names), set()).update(item_models)
 
     return {custom_data_id: sort_item_models(item_models) for custom_data_id, item_models in sorted(model_map.items())}
+
+
+def model_map_key(resolved_path: str, index: RepoIndex, use_names: bool) -> str:
+    if use_names:
+        display_name = index.display_names.get(resolved_path)
+        if display_name:
+            return display_name
+    return custom_data_key(resolved_path)
 
 
 def custom_data_key(resolved_path: str) -> str:
@@ -89,6 +97,7 @@ def sort_item_models(item_models: Sequence[str] | set[str]) -> list[str]:
 
 def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate a custom data ID to item model JSON map.")
+    parser.add_argument("--names", action="store_true", help="Use item display names as keys where known.")
     parser.add_argument("zip_path", type=Path, nargs=1, metavar="pack.zip")
     return parser.parse_args(argv)
 
@@ -104,7 +113,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 2
 
     try:
-        model_map = generate_model_map(input_path, load_repo_index())
+        model_map = generate_model_map(input_path, load_repo_index(), use_names=args.names)
     except (RepoLoadError, OSError, zipfile.BadZipFile, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1

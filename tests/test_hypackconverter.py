@@ -195,6 +195,10 @@ class IdResolutionTests(unittest.TestCase):
             hypackconverter.ResolvedId("goblin_egg_blue", "display name"),
         )
 
+    def test_display_names_are_stored_without_formatting(self) -> None:
+        self.assertEqual(self.index.display_names["legend_rod"], "Rod of Legends")
+        self.assertEqual(self.index.display_names["goblin_egg_blue"], "Blue Goblin Egg")
+
     def test_display_name_fallback_removes_apostrophes(self) -> None:
         index = hypackconverter.RepoIndex()
         hypackconverter.add_items(index, [item("KNIFE_HUNTER", "Hunter's Knife")])

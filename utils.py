@@ -84,6 +84,7 @@ class ResolvedId:
 class RepoIndex:
     direct: dict[str, str] = field(default_factory=dict)
     names: dict[str, set[str]] = field(default_factory=lambda: defaultdict(set))
+    display_names: dict[str, str] = field(default_factory=dict)
 
     def add_direct(self, source_id: object, target: str) -> None:
         source = str(source_id).strip().lower()
@@ -92,6 +93,8 @@ class RepoIndex:
 
     def add_name(self, name: object, target: str) -> None:
         text = strip_formatting(component_to_text(name)).strip()
+        if text and target not in self.display_names:
+            self.display_names[target] = text
         if text.startswith(FRAGGED_PREFIX):
             normalized = normalize_name(text.removeprefix(FRAGGED_PREFIX))
             if normalized:
